@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Medications: Public read, Admin write (simulated as false for now, or specific UID)
+    match /medications/{medicationId} {
+      allow read: if true;
+      allow write: if false; // Only admin via backend or console
+    }
+
+    // Orders: User can read/create their own orders
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (isOwner(existing().userId) || isOwner(incoming().userId));
+      allow create: if isSignedIn() && isOwner(incoming().userId) 
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time;
+      allow update: if isSignedIn() && isOwner(existing().userId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'shippingAddress'])
+        && (existing().status == 'pending'); // Can only update if pending
+    }
+
+    // Appointments: User can manage their own appointments
+    match /appointments/{appointmentId} {
+      allow read: if isSignedIn() && (isOwner(existing().userId) || isOwner(incoming().userId));
+      allow create: if isSignedIn() && isOwner(incoming().userId)
+        && incoming().status == 'scheduled';
+      allow update: if isSignedIn() && isOwner(existing().userId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'dateTime', 'reason']);
+      allow delete: if isSignedIn() && isOwner(existing().userId) && existing().status == 'scheduled';
+    }
+
+    // Users: User can read/write their own profile
+    match /users/{userId} {
+      allow read: if isSignedIn() && isOwner(userId);
+      allow create, update: if isSignedIn() && isOwner(userId)
+        && (incoming().userId == userId);
+    }
+  }
+}
