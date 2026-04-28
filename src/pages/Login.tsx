@@ -1,9 +1,10 @@
 import React from 'react';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Pill, Chrome, ArrowRight, Shield } from 'lucide-react';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -13,7 +14,25 @@ export default function Login() {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      if (user) {
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        
+        if (!userDoc.exists()) {
+          await setDoc(userRef, {
+            userId: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            phone: user.phoneNumber || '',
+            address: '',
+            createdAt: new Date().toISOString()
+          });
+        }
+      }
+      
       navigate('/');
     } catch (error) {
       console.error("Sign in error:", error);
@@ -23,7 +42,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-pharmacy-bg p-4 flex-col lg:flex-row gap-12 pt-20">
+    <div className="min-h-screen flex items-center justify-center p-4 flex-col lg:flex-row gap-12 pt-20 pb-20">
       <motion.div 
         initial={{ opacity: 0, x: -50 }}
         animate={{ opacity: 1, x: 0 }}
@@ -69,7 +88,7 @@ export default function Login() {
         <img 
           src="https://images.unsplash.com/photo-1579154235884-3323247c4b9b?auto=format&fit=crop&q=80&w=800" 
           alt="Pharmacy Care"
-          className="rounded-[60px] shadow-2xl filter brightness-95"
+          className="rounded-[60px] shadow-2xl filter brightness-95 object-cover h-[600px] w-full"
           referrerPolicy="no-referrer"
         />
       </motion.div>

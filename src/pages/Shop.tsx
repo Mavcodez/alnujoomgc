@@ -1,9 +1,12 @@
 import React from 'react';
+import { Link, useParams, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Filter, ShoppingBag, Plus, Minus, Check, AlertCircle, ShoppingCart } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import { Medication } from '../types';
+import { PHARMACIES } from '../data/pharmacies';
+import toast from 'react-hot-toast';
 
 // Mock data while Firestore is empty
 const MOCK_MEDICATIONS: Medication[] = [
@@ -46,31 +49,66 @@ const MOCK_MEDICATIONS: Medication[] = [
     stock: 15,
     imageUrl: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=400',
     requiresPrescription: false
+  },
+  {
+    id: '5',
+    name: 'Ibuprofen 400mg',
+    description: 'Relieves pain, reduces inflammation, and lowers fever.',
+    price: 22.00,
+    category: 'Pain Relief',
+    stock: 45,
+    imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400',
+    requiresPrescription: false
+  },
+  {
+    id: '6',
+    name: 'Cetrizine 10mg',
+    description: 'Non-drowsy antihistamine for allergy relief.',
+    price: 32.50,
+    category: 'Allergy',
+    stock: 35,
+    imageUrl: 'https://images.unsplash.com/photo-1550572017-ed200f5e6a43?auto=format&fit=crop&q=80&w=400',
+    requiresPrescription: false
+  },
+  {
+    id: '7',
+    name: 'Ventolin Inhaler',
+    description: 'Fast-acting bronchodilator for asthma relief.',
+    price: 55.00,
+    category: 'Respiratory',
+    stock: 12,
+    imageUrl: 'https://images.unsplash.com/photo-1631549916768-4119b29cb241?auto=format&fit=crop&q=80&w=400',
+    requiresPrescription: true
+  },
+  {
+    id: '8',
+    name: 'Johnson\'s Baby Oil',
+    description: 'Locks in more moisture for baby soft skin.',
+    price: 25.00,
+    category: 'Baby Care',
+    stock: 60,
+    imageUrl: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=400',
+    requiresPrescription: false
   }
 ];
 
 export default function Shop() {
+  const { pharmacyId } = useParams();
+  const pharmacy = PHARMACIES.find(p => p.id === pharmacyId);
+
   const [medications, setMedications] = React.useState<Medication[]>(MOCK_MEDICATIONS);
   const [loading, setLoading] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState('All');
   const [cart, setCart] = React.useState<{[key: string]: number}>({});
 
+  if (!pharmacy) return <Navigate to="/" replace />;
+  const basePath = `/${pharmacy.id}`;
+
   const categories = ['All', ...Array.from(new Set(MOCK_MEDICATIONS.map(m => m.category)))];
 
   React.useEffect(() => {
-    // Attempt real database fetch if you want, but sticking to mock for now for stability
-    /*
-    const fetchMedications = async () => {
-      setLoading(true);
-      const q = query(collection(db, 'medications'));
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Medication));
-      if (data.length > 0) setMedications(data);
-      setLoading(false);
-    };
-    fetchMedications();
-    */
+    // DB fetch logic
   }, []);
 
   const filteredMedications = medications.filter(m => {
@@ -84,6 +122,11 @@ export default function Shop() {
     setCart(prev => {
       const current = prev[id] || 0;
       const next = Math.max(0, current + delta);
+      
+      if (delta > 0 && current === 0) {
+         toast.success('Added to basket');
+      }
+
       if (next === 0) {
         const { [id]: _, ...rest } = prev;
         return rest;
@@ -92,9 +135,9 @@ export default function Shop() {
     });
   };
 
-  const cartTotal = Object.entries(cart).reduce((acc, [id, qty]) => {
+  const cartTotal = Object.entries(cart).reduce((acc: number, [id, qty]) => {
     const med = medications.find(m => m.id === id);
-    return acc + (med ? med.price * qty : 0);
+    return acc + (med ? Number(med.price) * Number(qty) : 0);
   }, 0);
 
   return (
@@ -105,7 +148,7 @@ export default function Shop() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
           <div className="flex-1">
             <h1 className="text-4xl font-serif font-bold text-pharmacy-primary mb-4">Medication Shop</h1>
-            <p className="text-slate-500 font-light max-w-lg">Browse our wide range of authentic medications and health products. Fast delivery in Fujairah.</p>
+            <p className="text-slate-500 font-light max-w-lg">Browse our wide range of authentic medications and health products. Fast delivery in {pharmacy.city}.</p>
           </div>
           
           <div className="w-full md:w-[400px] relative">
@@ -152,7 +195,7 @@ export default function Shop() {
                 <h4 className="text-lg font-bold mb-1">Your Basket</h4>
                 <p className="text-xs opacity-70 mb-6">{Object.keys(cart).length} items selected</p>
                 <div className="text-2xl font-serif font-bold mb-6 italic">AED {cartTotal.toFixed(2)}</div>
-                <Link to="/cart" className="block w-full bg-white text-pharmacy-primary text-center py-3 rounded-xl font-bold text-sm hover:scale-105 transition-all">
+                <Link to={`${basePath}/cart`} className="block w-full bg-white text-pharmacy-primary text-center py-3 rounded-xl font-bold text-sm hover:scale-105 transition-all">
                   Go to Checkout
                 </Link>
               </div>

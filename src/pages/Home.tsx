@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Pill, ShieldCheck, Truck, Clock, ArrowRight, Star, HeartPulse, Sparkles, Calendar, MapPin, Phone } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useParams, Navigate } from 'react-router-dom';
+import { PHARMACIES } from '../data/pharmacies';
 
 const categories = [
   { name: 'Pain Relief', icon: '💊', count: 120 },
@@ -21,16 +22,23 @@ const features = [
   {
     icon: <Truck size={24} className="text-blue-600" />,
     title: "Fast Delivery",
-    desc: "Get your essentials delivered to your doorstep in Fujairah within 2 hours."
+    desc: "Get your essentials delivered to your doorstep within 2 hours."
   },
   {
     icon: <Clock size={24} className="text-purple-600" />,
     title: "Late Night Support",
-    desc: "Open until 2:00 AM daily to assist with your urgent medical needs."
+    desc: "Open late to assist with your urgent medical needs."
   }
 ];
 
 export default function Home() {
+  const { pharmacyId } = useParams();
+  const pharmacy = PHARMACIES.find(p => p.id === pharmacyId);
+
+  if (!pharmacy) return <Navigate to="/" replace />;
+
+  const basePath = `/${pharmacy.id}`;
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -49,19 +57,19 @@ export default function Home() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <span className="text-xs font-bold uppercase tracking-widest">Available 20/7 in Fujairah</span>
+                <span className="text-xs font-bold uppercase tracking-widest">Available in {pharmacy.city}</span>
               </div>
               <h1 className="text-5xl lg:text-7xl font-serif font-bold text-pharmacy-primary leading-[1.1] mb-8">
-                Your Health, Our <span className="text-pharmacy-accent italic">Priority</span> Everday.
+                Your Health, Our <span className="text-pharmacy-accent italic">Priority</span> Everyday.
               </h1>
               <p className="text-lg text-slate-600 mb-10 max-w-xl mx-auto lg:mx-0 leading-relaxed font-light">
-                Order your prescriptions online, book pharmacist consultations, and experience premium care with Al Nujoom Pharmacy — serving Dibba Al-Fujairah since 2012.
+                Order your prescriptions online, book pharmacist consultations, and experience premium care with {pharmacy.name} — serving {pharmacy.city}.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                <Link to="/shop" className="w-full sm:w-auto bg-pharmacy-primary text-white px-8 py-4 rounded-full font-medium hover:scale-105 transition-all shadow-xl shadow-pharmacy-primary/25 flex items-center justify-center gap-2">
+                <Link to={`${basePath}/shop`} className="w-full sm:w-auto bg-pharmacy-primary text-white px-8 py-4 rounded-full font-medium hover:scale-105 transition-all shadow-xl shadow-pharmacy-primary/25 flex items-center justify-center gap-2">
                   Order Now <ArrowRight size={18} />
                 </Link>
-                <Link to="/appointments" className="w-full sm:w-auto border-2 border-pharmacy-primary/10 text-pharmacy-primary px-8 py-4 rounded-full font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
+                <Link to={`${basePath}/appointments`} className="w-full sm:w-auto border-2 border-pharmacy-primary/10 text-pharmacy-primary px-8 py-4 rounded-full font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
                   Book Consultation
                 </Link>
               </div>
@@ -69,7 +77,7 @@ export default function Home() {
               <div className="mt-12 flex items-center justify-center lg:justify-start gap-8 opacity-60 grayscale hover:grayscale-0 transition-all">
                 <div className="flex items-center gap-2">
                   <Star className="text-yellow-500 fill-current" size={16} />
-                  <span className="text-sm font-bold">4.4 Google Rating</span>
+                  <span className="text-sm font-bold">{pharmacy.rating} ({pharmacy.reviewCount} Reviews)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <HeartPulse className="text-red-500" size={16} />
@@ -164,9 +172,9 @@ export default function Home() {
             <div className="flex-1 text-center lg:text-left z-10">
               <h2 className="text-3xl lg:text-5xl font-serif font-semibold text-white mb-6">Need expert advice?</h2>
               <p className="text-white/70 mb-10 max-w-lg mx-auto lg:mx-0 font-light">
-                Schedule a private 15-minute consultation with our senior pharmacists. Available for medication reviews, wellness advice, and chronic disease management.
+                Schedule a private 15-minute consultation with our senior pharmacists at {pharmacy.city}. Available for medication reviews, wellness advice, and chronic disease management.
               </p>
-              <Link to="/appointments" className="inline-flex bg-white text-pharmacy-primary px-10 py-5 rounded-full font-bold hover:scale-105 transition-all shadow-xl shadow-black/20 gap-3 items-center">
+              <Link to={`${basePath}/appointments`} className="inline-flex bg-white text-pharmacy-primary px-10 py-5 rounded-full font-bold hover:scale-105 transition-all shadow-xl shadow-black/20 gap-3 items-center">
                 <Calendar size={20} />
                 Book Free Consultation
               </Link>
@@ -198,22 +206,19 @@ export default function Home() {
       <section className="py-24 bg-white border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-16 items-center">
-            <div className="flex-1 w-full h-[400px] rounded-[40px] overflow-hidden bg-slate-100 relative">
-               <div className="absolute inset-0 flex items-center justify-center">
-                 <p className="text-sm font-serif italic opacity-40">Map View: Rugaylat Rd - Al ‘Ikkamiyah - Fujairah</p>
-               </div>
-               {/* Embed real static map if possible, or just a stylized placeholder */}
-               <img 
-                src="https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&q=80&w=1200" 
-                alt="Pharmacy outdoors"
-                className="w-full h-full object-cover brightness-75"
-                referrerPolicy="no-referrer"
-              />
+            <div className="flex-1 w-full h-[400px] rounded-[40px] overflow-hidden bg-slate-100 relative shadow-inner">
+               <iframe 
+                  width="100%" 
+                  height="100%" 
+                  style={{ border: 0 }} 
+                  loading="lazy" 
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(pharmacy.name + ', ' + pharmacy.city)}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+               />
             </div>
             <div className="flex-1">
               <h2 className="text-3xl font-serif font-bold text-pharmacy-primary mb-6 italic">Visit our branch</h2>
               <p className="text-slate-500 mb-8 leading-relaxed">
-                Located conveniently on Rugaylat Road, we provide a spacious and welcoming environment for all your pharmaceutical needs. Plenty of parking available.
+                Located conveniently in {pharmacy.city}, we provide a spacious and welcoming environment for all your pharmaceutical needs.
               </p>
               <div className="space-y-6">
                 <div className="flex gap-4">
@@ -221,8 +226,8 @@ export default function Home() {
                     <MapPin size={24} />
                   </div>
                   <div>
-                    <h4 className="font-bold">Dibba Al-Fujairah</h4>
-                    <p className="text-sm text-slate-500">Rugaylat Rd - Al ‘Ikkamiyah - Fujairah</p>
+                    <h4 className="font-bold">{pharmacy.city} Branch</h4>
+                    <p className="text-sm text-slate-500">{pharmacy.address}</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
@@ -231,7 +236,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h4 className="font-bold">Call for info</h4>
-                    <p className="text-sm text-slate-500">09 243 2397</p>
+                    <p className="text-sm text-slate-500">{pharmacy.phone}</p>
                   </div>
                 </div>
               </div>

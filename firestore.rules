@@ -10,6 +10,13 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "manavgujaran@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -27,38 +34,43 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Medications: Public read, Admin write (simulated as false for now, or specific UID)
-    match /medications/{medicationId} {
-      allow read: if true;
-      allow write: if false; // Only admin via backend or console
+    // Admins
+    match /admins/{userId} {
+      allow read: if isSignedIn(); // Let people check if they are admin
     }
 
-    // Orders: User can read/create their own orders
+    // Medications: Public read, Admin write
+    match /medications/{medicationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Orders: User can read/create their own orders. Admin can read/update all.
     match /orders/{orderId} {
-      allow read: if isSignedIn() && (isOwner(existing().userId) || isOwner(incoming().userId));
+      allow read: if isAdmin() || (isSignedIn() && (isOwner(existing().userId) || isOwner(incoming().userId)));
       allow create: if isSignedIn() && isOwner(incoming().userId) 
         && incoming().status == 'pending'
         && incoming().createdAt == request.time;
-      allow update: if isSignedIn() && isOwner(existing().userId)
+      allow update: if isAdmin() || (isSignedIn() && isOwner(existing().userId)
         && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'shippingAddress'])
-        && (existing().status == 'pending'); // Can only update if pending
+        && (existing().status == 'pending'));
     }
 
-    // Appointments: User can manage their own appointments
+    // Appointments: User can manage their own appointments. Admin can manage all.
     match /appointments/{appointmentId} {
-      allow read: if isSignedIn() && (isOwner(existing().userId) || isOwner(incoming().userId));
+      allow read: if isAdmin() || (isSignedIn() && (isOwner(existing().userId) || isOwner(incoming().userId)));
       allow create: if isSignedIn() && isOwner(incoming().userId)
         && incoming().status == 'scheduled';
-      allow update: if isSignedIn() && isOwner(existing().userId)
-        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'dateTime', 'reason']);
-      allow delete: if isSignedIn() && isOwner(existing().userId) && existing().status == 'scheduled';
+      allow update: if isAdmin() || (isSignedIn() && isOwner(existing().userId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'dateTime', 'reason']));
+      allow delete: if isAdmin() || (isSignedIn() && isOwner(existing().userId) && existing().status == 'scheduled');
     }
 
-    // Users: User can read/write their own profile
+    // Users: User can read/write their own profile. Admin can read all.
     match /users/{userId} {
-      allow read: if isSignedIn() && isOwner(userId);
-      allow create, update: if isSignedIn() && isOwner(userId)
-        && (incoming().userId == userId);
+      allow read: if isAdmin() || (isSignedIn() && isOwner(userId));
+      allow create, update: if isAdmin() || (isSignedIn() && isOwner(userId)
+        && (incoming().userId == userId));
     }
   }
 }

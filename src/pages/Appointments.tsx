@@ -1,20 +1,28 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Calendar, Clock, Stethoscope, Video, MessageSquare, ChevronRight, Check } from 'lucide-react';
+import { useParams, Navigate } from 'react-router-dom';
 import { db, auth } from '../lib/firebase';
 import { addDoc, collection } from 'firebase/firestore';
 import { format, addDays, startOfToday } from 'date-fns';
+import { PHARMACIES } from '../data/pharmacies';
 
 const timeSlots = [
   '09:00 AM', '10:00 AM', '11:00 AM', '02:00 PM', '03:00 PM', '04:00 PM', '08:00 PM', '09:00 PM'
 ];
 
 export default function Appointments() {
+  const { pharmacyId } = useParams();
+  const pharmacy = PHARMACIES.find(p => p.id === pharmacyId);
+
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [success, setSuccess] = React.useState(false);
+
+  if (!pharmacy) return <Navigate to="/" replace />;
+  const basePath = `/${pharmacy.id}`;
 
   const dates = Array.from({ length: 7 }, (_, i) => addDays(startOfToday(), i));
 
@@ -27,10 +35,11 @@ export default function Appointments() {
       const dateTime = `${format(selectedDate, 'yyyy-MM-dd')} ${selectedTime}`;
       await addDoc(collection(db, 'appointments'), {
         userId: auth.currentUser.uid,
+        pharmacyId: pharmacy.id,
         dateTime,
         reason,
         status: 'scheduled',
-        pharmacistName: 'Dr. Ahmad Ibrahim' // Fixed for demo
+        pharmacistName: `Dr. Ahmad Ibrahim (${pharmacy.city})`
       });
       setSuccess(true);
     } catch (error) {
@@ -53,13 +62,13 @@ export default function Appointments() {
           </div>
           <h2 className="text-3xl font-serif font-bold text-pharmacy-primary mb-4 italic">Appointment Booked!</h2>
           <p className="text-slate-500 mb-10 leading-relaxed font-light">
-            Your consultation with Dr. Ahmad Ibrahim has been scheduled. You'll receive a confirmation email shortly.
+            Your consultation at {pharmacy.name} has been scheduled. You'll receive a confirmation email shortly.
           </p>
           <button 
             onClick={() => setSuccess(false)}
             className="bg-pharmacy-primary text-white px-10 py-4 rounded-full font-bold hover:scale-105 transition-all shadow-xl shadow-pharmacy-primary/20"
           >
-            Back to Calendar
+            Book Another
           </button>
         </motion.div>
       </div>
@@ -70,7 +79,7 @@ export default function Appointments() {
     <div className="pt-32 pb-20 bg-pharmacy-bg min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h1 className="text-4xl lg:text-5xl font-serif font-bold text-pharmacy-primary mb-6">Expert Consultation</h1>
+          <h1 className="text-4xl lg:text-5xl font-serif font-bold text-pharmacy-primary mb-6">Expert Consultation in {pharmacy.city}</h1>
           <p className="text-slate-500 max-w-xl mx-auto font-light leading-relaxed">
             Professional advice just a few clicks away. Choose a convenient time to speak with our qualified pharmacists about your healthcare needs.
           </p>
@@ -102,9 +111,9 @@ export default function Appointments() {
              <div className="medical-gradient p-8 rounded-[40px] text-white shadow-2xl relative overflow-hidden">
                <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 translate-x-1/2" />
                <h4 className="text-lg font-bold mb-4">Urgent Help?</h4>
-               <p className="text-sm opacity-70 mb-8 leading-relaxed">If you need immediate assistance, please call our 20/7 emergency line.</p>
-               <a href="tel:092432397" className="inline-flex items-center gap-2 text-sm font-bold bg-white/10 hover:bg-white/20 px-6 py-3 rounded-full transition-colors">
-                 09 243 2397 <ChevronRight size={16} />
+               <p className="text-sm opacity-70 mb-8 leading-relaxed">If you need immediate assistance, please call our local branch line.</p>
+               <a href={`tel:${pharmacy.phone.replace(/\s+/g, '')}`} className="inline-flex items-center gap-2 text-sm font-bold bg-white/10 hover:bg-white/20 px-6 py-3 rounded-full transition-colors">
+                 {pharmacy.phone} <ChevronRight size={16} />
                </a>
              </div>
           </div>
